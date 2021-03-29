@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  main:
+  jackson:
+    # Controls the inclusion of properties during serialization.
+    default-property-inclusion: non_null
+
+  application:
+    # Application name
+    name: person-service
+
+
+logging:
+  level:
+    net:
+      demo:
+        myjava:
+            microservices:
+              addressservice: ${logLevel}
+    org:
+      springframework: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    enabled-by-default: true
+  endpoint:
+    env:
+      keys-to-sanitize: password,secret, key, token
+    health:
+      probes:
+        enabled: true
+      show-details: always
+      group:
+        liveness:
+          include: livenessProbe, diskSpace,ping # add based on the api needs
+          show-details: always
+        readiness:
+          include: diskSpace,ping  # add based on the api needs
+          show-details: always
+    prometheus:
+      enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles[http.server.requests]: 0.90,0.95,0.99
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  info:
+    git:
+      mode: full
+app:
+  address-service:
+    url: ${addressserviceUrl:http://localhost:8081}
+    resource-path: ${addressservicePath:/address/person}
+
+

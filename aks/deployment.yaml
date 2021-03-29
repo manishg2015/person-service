@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __deploymentName__
+  namespace: __namespace__
+spec:
+  replicas: __replicaCount__            # no of replicas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: __deploymentName__
+  template:
+    metadata:
+      name: app                        # NEW
+      labels:
+        app: __deploymentName__
+      annotations:
+        # container name
+        ad.datadoghq.com/__deploymentName__.check_names: '["prometheus"]'
+        ad.datadoghq.com/__deploymentName__.init_configs: '[{}]'
+        ad.datadoghq.com/__deploymentName__.instances: |
+          [
+            {
+              "prometheus_url": "http://%%host%%:8080/actuator/prometheus",
+              "namespace": __deploymentName__,
+              "metrics": ["*"],
+              "health_service_check": true,
+              "max_returned_metrics": 2000
+            }
+          ]
+        prometheus.io/port: "8080"
+        prometheus.io/scrape: "true"
+        vault.security.banzaicloud.io/vault-addr: "https://vault.maersk-digital.net"
+        vault.security.banzaicloud.io/vault-skip-verify: "true"
+        # This value will typically match the name of the namespace
+        # where the deployment will run in.
+        vault.security.banzaicloud.io/vault-role: __namespace__
+    spec:
+      serviceAccountName: default
+      imagePullSecrets:
+        - name: athena-acr-secret
+      containers:
+        - name: __deploymentName__
+          image: athenaacr.azurecr.io/contractrates-demo:__imageTag__
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 2Gi
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms512m -Xmx1048m"
+            - name: DATADOG_ENDPOINT
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: logLevel
+              value: __logLevel__
+            - name: jwksServiceHost
+              value: __jwksServiceHost__
+            - name: databaseName
+              value: __cosmosdb__
+#            - name: k8s_server_url
+#              value: vault:athena-kv/data/kubernetes/pricing-dev-west-1/server#server
+            - name: databaseAccessKey
+              value: __databaseAccessKey__
+            - name: cosmosDatabaseUri
+              value: __cosmosDatabaseUri__
+            - name: maxpoolsize
+              value: '1'
+          readinessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/readiness
+#            tcpSocket:
+#              port: 8080
+            initialDelaySeconds: 500
+            periodSeconds: 20
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              port: 8080
+              path: /actuator/health/liveness
+#            tcpSocket:
+#              port: 8080
+            initialDelaySeconds: 530
+            periodSeconds: 30
+            failureThreshold: 3
+            successThreshold: 1
+

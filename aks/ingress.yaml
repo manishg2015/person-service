@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name:  __deploymentName__
+  namespace: __namespace__
+
+  labels:
+    website: __deploymentName__
+  annotations:
+    ## rate limiting params
+    kubernetes.io/ingress.class: "nginx"
+    # specific to aks pricing cluster due to WAF
+    external-dns.alpha.kubernetes.io/target: digital-platform-pricing-dev.westeurope.cloudapp.azure.com
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-connections: "5"
+    nginx.ingress.kubernetes.io/limit-rpm: "5"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "origin, x-requested-with, accept,X-APP-ID,X-API-KEY,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+   # nginx.ingress.kubernetes.io/whitelist-source-range: 35.221.111.12,35.200.13.90,35.195.223.195,35.187.105.240,35.243.224.157,35.231.168.188
+spec:
+  rules:
+    - host: __hostName__
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: __deploymentName__
+              servicePort: 8080
+#  tls:
+#    - hosts:
+#        - __hostName__
+#      secretName: tls-wildcard-maersk-digital-net  # needs to be replaced with athena tls
